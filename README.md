@@ -7,9 +7,10 @@ Análisis reproducible, trazable y estructurado sobre el perfil demográfico, h�
 ## 👥 Integrantes
 
 - Carlos Isaias Cazazola Rios
-- *[Nombre del Segundo Integrante]*
+- Mariano Ruiz
+- Ovejero Cesa
 
-**Comisión:** [Número de Comisión] · **Fecha:** Julio 2026
+**Comisión:** Mañana · lunes 05 de Julio del 2026
 
 ## 📁 Estructura del repositorio
 
