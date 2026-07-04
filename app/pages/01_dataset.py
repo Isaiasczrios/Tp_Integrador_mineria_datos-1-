@@ -1,46 +1,98 @@
-# -*- coding: utf-8 -*-
-"""01_Dataset.py
-
-Adaptado desde Colab para despliegue en Streamlit Community Cloud.
-"""
-
-import os
 import streamlit as st
 import pandas as pd
+import json
 
-st.title("🗃️ Inspección del Dataset")
+st.set_page_config(page_title="Dataset", page_icon="📂", layout="wide")
+st.title("📂 Dataset")
+
+@st.cache_data
+def load_data():
+    # 1. Búsqueda blindada del JSON original
+    try:
+        with open("data/raw/streaming_users_dirty.json") as f:
+            raw = pd.DataFrame(json.load(f))
+    except FileNotFoundError:
+        try:
+            with open("streaming_users_dirty.json") as f:
+                raw = pd.DataFrame(json.load(f))
+        except FileNotFoundError:
+            st.error("🚨 No se encontró el archivo JSON original.")
+            st.stop()
+            
+    # 2. Búsqueda blindada del CSV limpio
+    try:
+        clean = pd.read_csv("data/processed/streaming_users_clean.csv")
+    except FileNotFoundError:
+        try:
+            clean = pd.read_csv("streaming_users_clean.csv")
+        except FileNotFoundError:
+            try:
+                clean = pd.read_csv("app/streaming_users_clean.csv")
+            except FileNotFoundError:
+                st.error("🚨 Error crítico: No se encuentra 'streaming_users_clean.csv'.")
+                st.stop()
+                
+    return raw, clean
+
+raw, clean = load_data()
+
+st.markdown("## Descripción general")
+st.markdown("""
+El dataset contiene registros de usuarios de una plataforma de streaming con variables
+demográficas, de comportamiento y de soporte. Fue provisto por la cátedra en formato JSON.
+
+**Variables del dataset:**
+- `user_id`: identificador único del usuario (sin valor analítico)
+- `age`: edad del usuario (numérica)
+- `subscription_plan`: plan contratado — Básico / Estándar / Premium (categórica ordinal)
+- `monthly_watch_time_mins`: minutos de visualización en el mes (numérica continua)
+- `country`: país del usuario (categórica nominal)
+- `favorite_genre`: género favorito (categórica nominal)
+- `last_login_date`: fecha del último acceso a la plataforma (fecha)
+- `customer_support_tickets`: cantidad de tickets de soporte generados (numérica entera)
+""")
+
 st.markdown("---")
+st.markdown("## Calidad del dataset original")
 
-# Ruta del CSV relativa a la ubicación de este script (funciona sin importar
-# desde qué directorio de trabajo Streamlit Cloud ejecute la app)
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CANDIDATE_PATHS = [
-    os.path.join(SCRIPT_DIR, 'streaming_users_clean.csv'),            # misma carpeta que el script
-    os.path.join(SCRIPT_DIR, '..', 'streaming_users_clean.csv'),      # un nivel arriba (app/)
-    os.path.join(SCRIPT_DIR, '..', '..', 'streaming_users_clean.csv'),# raíz del repo
-]
-CSV_PATH = next((p for p in CANDIDATE_PATHS if os.path.exists(p)), None)
-if CSV_PATH is None:
-    st.error(
-        "No se encontró 'streaming_users_clean.csv'. Se buscó en:\n\n"
-        + "\n".join(f"- {os.path.normpath(p)}" for p in CANDIDATE_PATHS)
-        + "\n\nVerificá que el archivo esté subido a GitHub en alguna de esas rutas."
-    )
-    st.stop()
-df_clean = pd.read_csv(CSV_PATH)
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Filas originales", f"{raw.shape[0]}")
+col2.metric("Nulos detectados", "320")
+col3.metric("Fechas futuras", "882")
+col4.metric("Filas finales", f"{clean.shape[0]}")
 
-st.markdown("### 📋 Descripción General")
-st.write(f"El conjunto de datos final procesado cuenta con **{df_clean.shape[0]}** filas y **{df_clean.shape[1]}** columnas.")
+st.markdown("### Principales problemas y acciones tomadas")
+problemas = pd.DataFrame({
+    "Variable": ["user_id", "subscription_plan", "country", "favorite_genre", "monthly_watch_time_mins", "monthly_watch_time_mins", "age", "customer_support_tickets", "last_login_date", "last_login_date", "Múltiples"],
+    "Problema detectado": [
+        "100 registros duplicados",
+        "15 variantes para 3 planes (Std, STANDARD, Basic, Premiun, estandar...)",
+        "26 variantes para 7 países (Brazil/Brasil/BRA, Mexico/México/MEX...)",
+        "29 variantes para 7 géneros + 240 nulos (CRIME/Crime/Crimen, comedy/Comedia...)",
+        "Valores imposibles: -5 (21 registros), 130 (34), 150 (19)",
+        "Valores negativos: -120 (29 registros), -1 (20)",
+        "Valores imposibles: 50000 (11 registros), 99999 (20) + 193 nulos",
+        "Valores imposibles: -1 (29 registros), 99 (35), 150 (32)",
+        "Formatos mixtos: YYYY-MM-DD y YYYY/MM/DD",
+        "882 fechas futuras posteriores al 2025-06-27",
+        "320 valores nulos"
+    ],
+    "Acción": [
+        "Eliminación de duplicados",
+        "Mapeo a 3 categorías normalizadas",
+        "Mapeo a 7 países normalizados",
+        "Mapeo a 7 géneros normalizados + imputación con moda",
+        "Eliminación del registro",
+        "Eliminación del registro",
+        "Eliminación del registro + imputación con mediana",
+        "Eliminación del registro",
+        "Unificación con pd.to_datetime(format='mixed')",
+        "Eliminación de registros inconsistentes",
+        "Eliminación de filas con nulos (dropna)"
+    ]
+})
+st.table(problemas)
 
-st.markdown("### 🔍 Resumen de Calidad y Transformaciones")
-st.success(
-    "Durante la etapa de preparación en el Notebook 02, se aplicó una limpieza consciente basada en evidencia:\n"
-    "1. **Corrección de Tipeo:** Se estandarizaron las inconsistencias por mayúsculas intercaladas y faltas de ortografía "
-    "en los nombres de países (`country`) y planes de suscripción (`subscription_plan`), unificando en Básico, Estándar y Premium.\n"
-    "2. **Tratamiento de Outliers:** Los valores atípicos severos (150 años de edad y 99 tickets de soporte) fueron imputados "
-    "mediante la mediana robusta de la distribución para no sesgar las varianzas.\n"
-    "3. **Conversión Temporal:** Se tipificó `last_login_date` como formato datetime."
-)
-
-st.markdown("### 👀 Vista Previa de los Datos Limpios")
-st.dataframe(df_clean.head(15))
+st.markdown("---")
+st.markdown("## Dataset limpio")
+st.dataframe(clean)
