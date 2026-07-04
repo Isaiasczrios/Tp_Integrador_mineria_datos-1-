@@ -93,4 +93,4 @@ streamlit run pi_mineria_datos_1.py
 
 ## 🔗 Enlaces
 
-- Repositorio: [GitHub](https://github.com/)
+- Repositorio: [GitHub]([https://github.com/](https://github.com/Isaiasczrios/Tp_Integrador_mineria_datos-1-/edit/main/README.md))
