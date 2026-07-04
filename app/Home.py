@@ -15,10 +15,11 @@ st.markdown("---")
 
 st.markdown("### 👥 Integrantes del Grupo")
 st.write("* **Carlos Isaias Cazazola Rios**")
-st.write("* *[Nombre del Segundo Integrante]*")
+st.write("* **Ruiz Mariano**")
+st.write("* **Ovejero Cesar**")
 
 st.markdown("### 📌 Detalles de Entrega")
-st.write("**Comisión:** [Número de Comisión]")
+st.write("**Comisión:** mañana")
 st.write("**Fecha:** Julio 2026")
 
 st.markdown("### 📝 Contexto Breve")
